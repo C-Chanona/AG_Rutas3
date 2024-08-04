@@ -27,9 +27,11 @@ class Optimization:
         childrens = []
         for parent1, parent2 in selected:
             if random.random() > 0.5:
-                start = random.randint(0, len(parent1)-1)
+                start = random.randint(1, len(parent1)-1)
                 end = random.randint(start+1, len(parent1))
-                child = parent1[start:end]
+
+                # Mantén el primer elemento y realiza el cruce en los elementos a partir del segundo índice
+                child = [parent1[0]] + parent1[start:end]
                 child += [poi for poi in parent2 if poi not in child]
                 childrens.append(child)
         
@@ -38,7 +40,7 @@ class Optimization:
     def mutation(self, childrens):
         for children in childrens:
             if random.random() > 0.5:
-                i, j = random.sample(range(len(children)), 2)
+                i, j = random.sample(range(1, len(children)), 2)
                 children[i], children[j] = children[j], children[i]
 
         return childrens

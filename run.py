@@ -5,7 +5,7 @@ from Ag.Interface import Interface as ui
 
 import pandas as pd
 
-def main(dataset, start_poi="Parque de la marimba", generation=10):
+def main(dataset, start_poi="Parque de la marimba", generation=300):
     init = Initialization(dataset, start_poi)
     opt = Optimization()
     bests_by_generation = []
@@ -29,14 +29,16 @@ def main(dataset, start_poi="Parque de la marimba", generation=10):
 
         bests_by_generation.append(best_route)
     
-    print(best_route)
-    # route = md.create_path(best_route)
+    print("\n", best_route)
+
+    # route = md.create_path(best_route['route'])
     
     # ui.update_table(route)
+    ui.update_table(best_route['route'])
 
     ui.create_plot(bests_by_generation)
 
 if __name__ =='__main__':
-    # ui.create_window(main)
-    dataset = pd.read_excel("completo.xlsx")
-    main(dataset)
+    ui.create_window(main)
+    # dataset = pd.read_excel("completo.xlsx")
+    # main(dataset)

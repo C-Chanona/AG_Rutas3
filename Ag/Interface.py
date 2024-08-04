@@ -49,10 +49,10 @@ class Interface:
         button.place(x=350, y=270)
         button.bind("<Enter>", cls.on_enter), button.bind("<Leave>", cls.on_leave)
 
-        # cls.map_widget.place(relx=0.3, rely=0.65, anchor='center')
-        # cls.map_widget.set_zoom(15)
-        # cls.map_widget.set_position(19.4326, -99.1332)
-        # cls.create_table()
+        cls.map_widget.place(relx=0.3, rely=0.65, anchor='center')
+        cls.map_widget.set_zoom(15)
+        cls.map_widget.set_position(16.75429589057517, -93.11561393069759)
+        cls.create_table()
 
         cls.window.mainloop()
     
@@ -83,10 +83,10 @@ class Interface:
         cls.tree.pack(side=LEFT, fill=BOTH, expand=True)
 
         # Define las columnas
-        cls.tree.heading("Uno", text="Punto de interés")
+        cls.tree.heading("Uno", text="Tiempo")
         cls.tree.heading("Dos", text="Nombre")
-        cls.tree.heading("Tres", text="Tiempo de visita")
-        cls.tree.heading("Cuatro", text="Distancia y Duracion")
+        cls.tree.heading("Tres", text="Visita")
+        cls.tree.heading("Cuatro", text="Viaje")
 
         # Configura el tamaño de las columnas
         cls.tree.column("Uno", width=100)
@@ -106,28 +106,37 @@ class Interface:
             cls.tree.delete(i)
         
         # Verifica si hay elementos en la ruta
-        if not route["path"]:
+        if not route:
             return  # Sale de la función si la ruta está vacía
         
-        # Añade el primer elemento con toda la información
-        first_row = {
-            "valor1": 1,
-            "valor2": route["path"][0].name,
-            "valor3": round(route["path"][0].visit_time, 2),
-            "valor4": f"{round(route['distance'], 2)} km, {route['duration']} h"
-        }
-        cls.tree.insert("", "end", values=(first_row["valor1"], first_row["valor2"], first_row["valor3"], first_row["valor4"]))
-        
+        current_time = 0
+        start_time = 0
         # Añade el resto de los elementos
-        for index, path_item in enumerate(route["path"][1:], start=2):  # Comienza en el segundo elemento, índice ajustado a 2
+        for poi in route:  # Comienza en el segundo elemento, índice ajustado a 2
+            start_time += current_time
+            poi_info = cls.dataset.loc[cls.dataset['id_lugar'] == poi['id_origen']]
+            if not poi_info.empty:
+                poi_info = poi_info.iloc[0]
+            
+            route_info = cls.dataset.loc[
+                (cls.dataset['id_origen'] == poi['id_origen']) & 
+                (cls.dataset['id_destino'] == poi['id_destino']) & 
+                (cls.dataset['transporte'] == poi['transport'])
+            ]
+            if not route_info.empty:
+                route_info = route_info.iloc[0]
+
+            current_time = + route_info['tiempo_viaje'] + poi_info['tiempo_visita']
+
             row = {
-                "valor1": index,
-                "valor2": path_item.name,
-                "valor3": round(path_item.visit_time, 2),
-                "valor4": ""  # Vacío para los siguientes elementos
+                "valor1": start_time,
+                "valor2": poi_info['nombre'],
+                "valor3": poi_info['tiempo_visita'],
+                "valor4": route_info['tiempo_viaje']
             }
             cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"], row["valor4"]))
-
+            # cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"]))
+        print("tiempo total", current_time)
     @classmethod
     def create_plot(cls, bests_by_generation):
         fitness_values = [individual['fitness'] for individual in bests_by_generation]
