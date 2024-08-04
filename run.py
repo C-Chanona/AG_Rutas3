@@ -5,7 +5,7 @@ from Ag.Interface import Interface as ui
 
 import pandas as pd
 
-def main(dataset, start_poi="Parque de la marimba", generation=300):
+def main(dataset, start_poi="Parque de la marimba", generation=50):
     init = Initialization(dataset, start_poi)
     opt = Optimization()
     bests_by_generation = []
