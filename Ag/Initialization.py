@@ -5,8 +5,10 @@ class Initialization:
     def __init__(self, dataset, start_poi):
         self.dataset = dataset
         self.start_poi = start_poi
+        self.cache = {}
+        self.individual_cache = {}
 
-    def generate_population(self, p0=15):
+    def generate_population(self, p0=40):
         id_start_poi = int(self.dataset.loc[self.dataset['nombre'] == self.start_poi, 'id_lugar'].values[0])
         pois = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         pois.remove(id_start_poi)
@@ -19,7 +21,7 @@ class Initialization:
             while available_pois:
                 # Encuentra el POI más cercano al último POI en la ruta
                 current_poi = route[-1]
-                distances = [(poi, self.get_distance(current_poi, poi)) for poi in available_pois]
+                distances = [(poi, md.get_distance(current_poi, poi)) for poi in available_pois]
                 next_poi = min(distances, key=lambda x: x[1])[0]
                 
                 route.append(next_poi)
@@ -37,6 +39,7 @@ class Initialization:
                     'id_destino': route[i + 1],
                     'transport': transport
                 })
+            # Cada individuo en la poblacion es una lista de diccionarios, donde cada diccionario representa un segmento de la ruta
             population.append(individual)
 
         print("POBLACION: ", population)
@@ -44,114 +47,59 @@ class Initialization:
 
     def fitness(self, population):
         population_with_fitness = []
-
         for individual in population:
-            total_distance = 0
-            total_time = 0
-            total_cost = 0
+            # Convierte el individual a una tupla para usarla como clave de caché
+            individual_key = tuple((poi['id_origen'], poi['id_destino'], poi['transport']) for poi in individual)
+            if individual_key in self.individual_cache:
+                fitness_data = self.individual_cache[individual_key]
+            else:
+                total_distance = 0
+                total_time = 0
+                total_cost = 0
 
-            # Ordenar la ruta por proximidad geográfica
-            route = self.sort_by_proximity(individual)
-            individual = self.filter_and_select_transport(route)
+                # Ordenar la ruta por proximidad geográfica
+                route = md.sort_by_proximity(individual) # Ayuda al algoritmo a encontrar soluciones mas optimaz y logicas
+                individual = md.filter_route(route)
 
-            for poi_pair in individual:
-                id_origen = poi_pair['id_origen']
-                id_destino = poi_pair['id_destino']
-                transport = poi_pair['transport']
+                for poi_pair in individual: #itera sobre todos los segmentos de la ruta, sumando la distancia, tiempo y costo de cada segmento para obtener los totales de la ruta completa.
+                    id_origen = poi_pair['id_origen']
+                    id_destino = poi_pair['id_destino']
+                    transport = poi_pair['transport']
 
-                info = md.get_parameters(id_origen, id_destino, transport)
-                if info is not None:
-                    total_distance += info['distancia']
-                    total_time += info['tiempo_viaje']
-                    total_cost += info['costo']
-                else:
-                    # Penalizar rutas no encontradas
-                    total_time += 999
-                    total_cost += 999
+                    # Crear una clave única para la caché
+                    cache_key = (id_origen, id_destino, transport)
 
-            fitness_value = self.calculate_fitness(total_distance, total_time, total_cost)
-            population_with_fitness.append({
-                'route': individual,
-                'fitness': fitness_value,
-                'distance': total_distance,
-                'time': total_time,
-                'cost': total_cost
-            })
+                    if cache_key in self.cache:
+                        info = self.cache[cache_key]
+                    else:
+                        info = md.get_parameters(id_origen, id_destino, transport)
+                        self.cache[cache_key] = info
+
+                    if info is not None:
+                        total_distance += info['distancia']
+                        total_time += info['tiempo_viaje']
+                        total_cost += info['costo']
+                    else:
+                        # Penalizar rutas no encontradas
+                        total_time += 999
+                        total_cost += 999
+                
+                # Se invierte la relación porque queremos que las rutas con menor distancia, tiempo y costo sean consideradas mejores
+                fitness_value = (1 / (1 + total_distance)) + (1 / (1 + total_time)) + (1 / (1 + total_cost)) # o sea que valores más bajos resultan en valores más altos de aptitud.
+                # La suma de los tres componentes me permite considerar estas 3 variables simultáneamente en la evaluación de la ruta.
+                # fitness_value = 0.5*(1 / (1 + total_distance)) + 5*(1 / (1 + total_time)) + 2*(1 / (1 + total_cost)) # o sea que valores más bajos resultan en valores más altos de aptitud.
+                # dar más peso a un factor específico, aumenta la importancia de ese factor en la evaluación.
+                fitness_data = {
+                    'route': individual,
+                    'fitness': fitness_value,
+                    'distance': total_distance,
+                    'time': total_time,
+                    'cost': total_cost
+                }
+
+                # Almacenar el resultado en la caché de individual
+                self.individual_cache[individual_key] = fitness_data
+
+            population_with_fitness.append(fitness_data)
 
         return population_with_fitness
-    
-    def calculate_fitness(self, total_distance, total_time, total_cost):
-        # Calcular el fitness
-        fitness_value = (1 / (1 + total_distance)) + (1 / (1 + total_time)) + (1 / (1 + total_cost))
-        return fitness_value
-
-    def get_distance(self, id_origen, id_destino):
-        if id_origen == id_destino:
-            return 0  # O maneja esto de otra manera según tu lógica de negocio        
-        try:
-            return self.dataset.loc[
-                (self.dataset['id_origen'] == id_origen) &
-                (self.dataset['id_destino'] == id_destino)
-            ]['distancia'].values[0]
-        except IndexError:
-            raise IndexError(f"No se encontró una distancia para los índices: {id_origen}, {id_destino}")
-
-    def sort_by_proximity(self, route):
-        sorted_route = [route[0]]  # Mantén el punto de inicio
-        remaining = route[1:]
-        while remaining:
-            last_poi = sorted_route[-1]['id_destino']
-            next_poi = min(remaining, key=lambda x, last_poi=last_poi: self.get_distance(last_poi, x['id_destino']))
-            sorted_route.append(next_poi)
-            remaining.remove(next_poi)
-        return sorted_route
-    
-    def filter_and_select_transport(self, route):
-        unique_routes = {}
-        
-        # Agrupar transportes por (id_origen, id_destino)
-        for segment in route:
-            key = (segment['id_origen'], segment['id_destino'])
-            if key not in unique_routes:
-                unique_routes[key] = []
-            unique_routes[key].append(segment['transport'])
-        
-        # Seleccionar aleatoriamente un transporte para cada ruta única
-        filtered_route = []
-        for (id_origen, id_destino), transports in unique_routes.items():
-            selected_transport = random.choice(transports)
-            filtered_route.append({
-                'id_origen': id_origen,
-                'id_destino': id_destino,
-                'transport': selected_transport
-            })
-        
-        return filtered_route
-
-    # def sort_by_proximity(self, route):
-    #     sorted_route = [route[0]]  # Mantén el punto de inicio
-    #     remaining = route[1:]
-    #     visited_destinations = {route[0]['id_destino']}
-        
-    #     while remaining:
-    #         last_poi = sorted_route[-1]['id_destino']
-    #         next_poi = min(
-    #             remaining, 
-    #             key=lambda x, last_poi=last_poi: self.get_distance(last_poi, x['id_destino'])
-    #         )
-            
-    #         if next_poi['id_destino'] in visited_destinations:
-    #             remaining.remove(next_poi)
-    #             continue
-            
-    #         sorted_route.append(next_poi)
-    #         visited_destinations.add(next_poi['id_destino'])
-    #         remaining.remove(next_poi)
-        
-    #     return sorted_route
-
-    # def select_random_transport(self, route):
-    #     transports = ['Caminando', 'Bicicleta', 'Taxi', 'Colectivo']
-    #     for segment in route:
-    #         segment['transport'] = random.choice(transports)
-    #     return route

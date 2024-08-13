@@ -34,24 +34,24 @@ class Interface:
     def create_window(cls, main):
         cls.window.title("Optimizador de rutas")
         # cls.window.geometry("810x850")
-        cls.window.geometry("1320x850")
+        cls.window.geometry("900x850")
         window_width = cls.window.winfo_reqwidth()
         position_right = int(cls.window.winfo_screenwidth()/2 - window_width/2 - 200) -300
         cls.window.geometry("+{}+50".format(position_right))
 
 
-        start_poi = cls.create_combobox(cls.types, "Punto de interes inicial para tu recorrido", labx=545, laby=140, comx=600, comy=200)
+        start_poi = cls.create_combobox(cls.types, "Punto de interes inicial para tu recorrido", labx=50, laby=50, comx=75, comy=90)
 
         cls.style.configure("TButton", font=("Arial", 12))
         button = ttkb.Button(cls.window, text="Iniciar", width=10, bootstyle='success-outline',
                            command=lambda: main(cls.dataset, start_poi.get()),
                            )
-        button.place(x=350, y=270)
+        button.place(x=100, y=270)
         button.bind("<Enter>", cls.on_enter), button.bind("<Leave>", cls.on_leave)
 
-        cls.map_widget.place(relx=0.3, rely=0.65, anchor='center')
-        cls.map_widget.set_zoom(15)
-        cls.map_widget.set_position(16.75429589057517, -93.11561393069759)
+        # cls.map_widget.place(relx=0.3, rely=0.65, anchor='center')
+        # cls.map_widget.set_zoom(15)
+        # cls.map_widget.set_position(16.75429589057517, -93.11561393069759)
         cls.create_table()
 
         cls.window.mainloop()
@@ -76,7 +76,7 @@ class Interface:
     def create_table(cls):
         # Crea el frame que contendrá la tabla
         table_frame = ttkb.Frame(cls.window)
-        table_frame.place(x=810, y=50, width=490, height=730)  # Ajusta la posición y tamaño según necesites
+        table_frame.place(x=370, y=50, width=490, height=730)  # Ajusta la posición y tamaño según necesites
 
         # Crea el Treeview dentro del frame
         cls.tree = ttkb.Treeview(table_frame, columns=("Uno", "Dos", "Tres", "Cuatro"), show="headings", bootstyle="info")
@@ -99,6 +99,12 @@ class Interface:
         scrollbar.pack(side=RIGHT, fill=Y)
         cls.tree.configure(yscrollcommand=scrollbar.set)
 
+    @classmethod    
+    def convertir_a_horas_y_minutos(cls, minutos):
+        horas = minutos // 60
+        minutos_restantes = minutos % 60
+        return f"{horas}:{minutos_restantes}"
+    
     @classmethod
     def update_table(cls, route):
         # Elimina los datos existentes en la tabla
@@ -126,17 +132,23 @@ class Interface:
             if not route_info.empty:
                 route_info = route_info.iloc[0]
 
-            current_time = + route_info['tiempo_viaje'] + poi_info['tiempo_visita']
+            current_time =  route_info['tiempo_viaje'] + poi_info['tiempo_visita']
+
+            # Convertir tiempos a horas y minutos
+            start_time_horas = cls.convertir_a_horas_y_minutos(start_time)
+            tiempo_visita_horas = cls.convertir_a_horas_y_minutos(poi_info['tiempo_visita'])
+            tiempo_viaje_horas = cls.convertir_a_horas_y_minutos(route_info['tiempo_viaje'])
 
             row = {
-                "valor1": start_time,
+                "valor1": start_time_horas,
                 "valor2": poi_info['nombre'],
-                "valor3": poi_info['tiempo_visita'],
-                "valor4": route_info['tiempo_viaje']
+                "valor3": tiempo_visita_horas,
+                "valor4": tiempo_viaje_horas
             }
             cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"], row["valor4"]))
             # cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"]))
-        print("tiempo total", current_time)
+        # print("tiempo total", current_time)
+
     @classmethod
     def create_plot(cls, bests_by_generation):
         fitness_values = [individual['fitness'] for individual in bests_by_generation]

@@ -2,7 +2,6 @@ from Ag.Initialization import Initialization
 from Ag.Optimization import Optimization
 from Ag.Modeling import Model as md
 from Ag.Interface import Interface as ui
-
 import pandas as pd
 
 def main(dataset, start_poi="Parque de la marimba", generation=50):
@@ -12,7 +11,8 @@ def main(dataset, start_poi="Parque de la marimba", generation=50):
 
     population = init.generate_population()
     fitness_results = init.fitness(population)
-    best_route = min(fitness_results, key=lambda x: x['fitness'])
+    # best_route = min(fitness_results, key=lambda x: x['fitness'])
+    best_route = max(fitness_results, key=lambda x: x['fitness'])
     bests_by_generation.append(best_route)
     
     for _ in range(generation):
@@ -21,19 +21,19 @@ def main(dataset, start_poi="Parque de la marimba", generation=50):
         children = opt.mutation(children)
         new_population = list(population) + list(children)
         fitness_results = init.fitness(new_population)
-        best_route = min(fitness_results, key=lambda x: x['fitness'])
+        # best_route = min(fitness_results, key=lambda x: x['fitness'])
+        best_route = max(fitness_results, key=lambda x: x['fitness'])
         population, currently_best = opt.poda(fitness_results)
         
-        if currently_best['fitness'] < best_route['fitness']:
+        if currently_best['fitness'] > best_route['fitness']:
             best_route = currently_best
 
         bests_by_generation.append(best_route)
     
-    print("\n", best_route)
+    # print("\n", best_route)
 
     # route = md.create_path(best_route['route'])
     
-    # ui.update_table(route)
     ui.update_table(best_route['route'])
 
     ui.create_plot(bests_by_generation)

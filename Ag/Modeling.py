@@ -1,7 +1,7 @@
 from geopy.geocoders import Nominatim # Para OpenStreetMap
 from Ag.Interface import Interface as ui
 import requests
-import math
+import random
 import polyline
 import pandas as pd
 
@@ -93,18 +93,9 @@ class Model:
                 marker_color_circle='brown'
             )
             # markers.append((lat_origen, lon_origen))
-            # ui.map_widget.set_marker(
-            #     lat_destino, lon_destino, 
-            #     text=f"{i+1}. {name_destino}", 
-            #     text_color='black', 
-            #     font='Candara 11 bold', 
-            #     marker_color_outside='red', 
-            #     marker_color_circle='brown'
-            # )
-            # markers.append((lat_destino, lon_destino))
 
 
-            # Obtener la polilinea con la API de Google Maps
+        # Obtener la polilinea con la API de Google Maps
         distance, duration, polyline_encoded = Model.get_data_with_api(markers)
         # Crear la ruta conectando los puntos en orden
         ui.map_widget.set_path(polyline_encoded, name="Tour_Route", color='blue', width=3)
@@ -128,3 +119,49 @@ class Model:
         else:
             print(f"Ruta no encontrada: origen={id_origen}, destino={id_destino}, transporte={transporte}")
             return None
+    
+    @staticmethod
+    def get_distance(id_origen, id_destino): #Obtiene la distancia entre dos puntos de interes del conjunto de datos
+        if id_origen == id_destino:
+            return 0  # O maneja esto de otra manera según tu lógica de negocio        
+        try:
+            return Model.dataset.loc[
+                (Model.dataset['id_origen'] == id_origen) &
+                (Model.dataset['id_destino'] == id_destino)
+            ]['distancia'].values[0]
+        except IndexError:
+            raise IndexError(f"No se encontró una distancia para los índices: {id_origen}, {id_destino}")
+
+    @staticmethod
+    def sort_by_proximity(route): #Ordena la ruta basandose en la proximidad geografica de los puntos de interes
+        sorted_route = [route[0]]  # Mantén el punto de inicio
+        remaining = route[1:]
+        while remaining:
+            last_poi = sorted_route[-1]['id_destino']
+            next_poi = min(remaining, key=lambda x, last_poi=last_poi: Model.get_distance(last_poi, x['id_destino']))
+            sorted_route.append(next_poi)
+            remaining.remove(next_poi)
+        return sorted_route
+    
+    @staticmethod
+    def filter_route(route):
+        unique_routes = {}
+        
+        # Agrupar transportes por (id_origen, id_destino)
+        for segment in route:
+            key = (segment['id_origen'], segment['id_destino'])
+            if key not in unique_routes:
+                unique_routes[key] = []
+            unique_routes[key].append(segment['transport'])
+        
+        # Seleccionar aleatoriamente un transporte para cada ruta única
+        filtered_route = []
+        for (id_origen, id_destino), transports in unique_routes.items():
+            selected_transport = random.choice(transports)
+            filtered_route.append({
+                'id_origen': id_origen,
+                'id_destino': id_destino,
+                'transport': selected_transport
+            })
+        
+        return filtered_route

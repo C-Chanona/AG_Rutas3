@@ -22,46 +22,23 @@ class Optimization:
             parents.append((first_route, second_route))
         
         return parents
-    
-    # def crossover(self, selected): # cruce de orden parcial (Partially Mapped Crossover, PMX)
-    #     childrens = []
-    #     for parent1, parent2 in selected:
-    #         if random.random() > 0.5:
-    #             start = random.randint(1, len(parent1)-1)
-    #             end = random.randint(start+1, len(parent1))
-
-    #             # Mantén el primer elemento y realiza el cruce en los elementos a partir del segundo índice
-    #             child = [parent1[0]] + parent1[start:end]
-    #             child += [poi for poi in parent2 if poi not in child]
-    #             childrens.append(child)
-        
-    #     return childrens
 
     def crossover(self, selected):
         childrens = []
         for parent1, parent2 in selected:
             # Verifica si hay suficientes elementos para realizar un cruce
             if len(parent1) > 3:  # Deben ser al menos 4 elementos para seleccionar 2 puntos de cruce
-                start, end = sorted(random.sample(range(1, len(parent1)), 2))
+                start, end = sorted(random.sample(range(1, len(parent1)), 2)) # sorted asegura que start sea menor que end
 
                 # Realiza el cruce
                 child = [parent1[0]] + parent1[start:end]
-                child += [poi for poi in parent2 if poi not in child]
+                child += [poi for poi in parent2 if poi not in child] # Se añaden los elementos del padre2 que no están ya en el hijo.
                 childrens.append(child)
             else:
                 # Si no hay suficientes elementos, solo copia uno de los padres
                 childrens.append(parent1 if random.random() > 0.5 else parent2)
             
         return childrens
-
-    
-    # def mutation(self, childrens):
-    #     for children in childrens:
-    #         if random.random() > 0.5:
-    #             i, j = random.sample(range(1, len(children)), 2)
-    #             children[i], children[j] = children[j], children[i]
-
-    #     return childrens
 
     def mutation(self, childrens):
         for child in childrens:
