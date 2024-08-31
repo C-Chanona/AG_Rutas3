@@ -11,7 +11,8 @@ class Optimization:
 
         for _ in range(len(population_with_fitness)):
             tournament = random.sample(population_with_fitness, min(self.min_places, len(population_with_fitness)))
-            winner = min(tournament, key=lambda x: x['fitness'])
+            # winner = min(tournament, key=lambda x: x['fitness'])
+            winner = max(tournament, key=lambda x: x['fitness'])
             selected.append(winner['route'])
         
         while len(selected) >= 2:

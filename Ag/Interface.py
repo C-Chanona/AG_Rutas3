@@ -10,7 +10,6 @@ class Interface:
     types = dataset['nombre'].values.tolist()[:10]
 
     window = ttkb.Window(themename="darkly")
-    map_widget = mp.TkinterMapView(window, width=760, height=450, corner_radius=20)
     style = ttkb.Style()
 
     @classmethod
@@ -49,9 +48,6 @@ class Interface:
         button.place(x=100, y=270)
         button.bind("<Enter>", cls.on_enter), button.bind("<Leave>", cls.on_leave)
 
-        # cls.map_widget.place(relx=0.3, rely=0.65, anchor='center')
-        # cls.map_widget.set_zoom(15)
-        # cls.map_widget.set_position(16.75429589057517, -93.11561393069759)
         cls.create_table()
 
         cls.window.mainloop()
@@ -100,7 +96,7 @@ class Interface:
         cls.tree.configure(yscrollcommand=scrollbar.set)
 
     @classmethod    
-    def convertir_a_horas_y_minutos(cls, minutos):
+    def convert_time(cls, minutos):
         horas = minutos // 60
         minutos_restantes = minutos % 60
         return f"{horas}:{minutos_restantes}"
@@ -135,18 +131,17 @@ class Interface:
             current_time =  route_info['tiempo_viaje'] + poi_info['tiempo_visita']
 
             # Convertir tiempos a horas y minutos
-            start_time_horas = cls.convertir_a_horas_y_minutos(start_time)
-            tiempo_visita_horas = cls.convertir_a_horas_y_minutos(poi_info['tiempo_visita'])
-            tiempo_viaje_horas = cls.convertir_a_horas_y_minutos(route_info['tiempo_viaje'])
+            start_time_horas = cls.convert_time(start_time)
+            tiempo_visita_horas = cls.convert_time(poi_info['tiempo_visita'])
+            tiempo_viaje_horas = cls.convert_time(route_info['tiempo_viaje'])
 
             row = {
                 "valor1": start_time_horas,
                 "valor2": poi_info['nombre'],
                 "valor3": tiempo_visita_horas,
-                "valor4": tiempo_viaje_horas
+                "valor4": tiempo_viaje_horas if route.index(poi) < len(route) - 1 else "Ruta Completada"
             }
             cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"], row["valor4"]))
-            # cls.tree.insert("", "end", values=(row["valor1"], row["valor2"], row["valor3"]))
         # print("tiempo total", current_time)
 
     @classmethod

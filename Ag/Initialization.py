@@ -7,6 +7,7 @@ class Initialization:
         self.start_poi = start_poi
         self.cache = {}
         self.individual_cache = {}
+        self.time_max = 720 # 12 horas en minutos
 
     def generate_population(self, p0=40):
         id_start_poi = int(self.dataset.loc[self.dataset['nombre'] == self.start_poi, 'id_lugar'].values[0])
@@ -58,8 +59,8 @@ class Initialization:
                 total_cost = 0
 
                 # Ordenar la ruta por proximidad geográfica
-                route = md.sort_by_proximity(individual) # Ayuda al algoritmo a encontrar soluciones mas optimaz y logicas
-                individual = md.filter_route(route)
+                individual = md.sort_by_proximity(individual) # Ayuda al algoritmo a encontrar soluciones mas optimaz y logicas
+                # individual = md.filter_route(route)
 
                 for poi_pair in individual: #itera sobre todos los segmentos de la ruta, sumando la distancia, tiempo y costo de cada segmento para obtener los totales de la ruta completa.
                     id_origen = poi_pair['id_origen']
@@ -77,7 +78,8 @@ class Initialization:
 
                     if info is not None:
                         total_distance += info['distancia']
-                        total_time += info['tiempo_viaje']
+                        # total_time += info['tiempo_viaje']
+                        total_time += md.total_time(info['tiempo_viaje'], id_origen)
                         total_cost += info['costo']
                     else:
                         # Penalizar rutas no encontradas
@@ -89,6 +91,12 @@ class Initialization:
                 # La suma de los tres componentes me permite considerar estas 3 variables simultáneamente en la evaluación de la ruta.
                 # fitness_value = 0.5*(1 / (1 + total_distance)) + 5*(1 / (1 + total_time)) + 2*(1 / (1 + total_cost)) # o sea que valores más bajos resultan en valores más altos de aptitud.
                 # dar más peso a un factor específico, aumenta la importancia de ese factor en la evaluación.
+                
+                if not total_time <= self.time_max:
+                    last_poi = individual[-1]
+                    individual.remove(last_poi)
+
+
                 fitness_data = {
                     'route': individual,
                     'fitness': fitness_value,

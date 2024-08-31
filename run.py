@@ -30,10 +30,8 @@ def main(dataset, start_poi="Parque de la marimba", generation=50):
 
         bests_by_generation.append(best_route)
     
-    # print("\n", best_route)
-
-    # route = md.create_path(best_route['route'])
-    
+    print("\n RUTAAAAAA: ", best_route['route'])
+    print("\n TIEMPOOOOO: ", best_route['time'])
     ui.update_table(best_route['route'])
 
     ui.create_plot(bests_by_generation)
